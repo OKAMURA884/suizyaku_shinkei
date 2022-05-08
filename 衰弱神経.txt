@@ -1,0 +1,142 @@
+#If Win64 Then
+   Private Declare PtrSafe Sub Sleep Lib "kernel32" (ByVal dwMilliseconds As LongPtr)
+   #Else
+   Private Declare Sub Sleep Lib "kernel32" (ByVal dwMilliseconds As Long)
+   #End If
+Public cnt As Long 'カードをめくった回数
+Public countUp As Long '揃った枚数
+Sub Init()
+Dim i As Long
+Dim j As Long
+Dim m As Long
+Dim m2 As Long
+Dim mPair As Long
+Dim n As Long
+Dim mark As String
+Dim figure(1 To 13) As String
+Dim card(1 To 4, 1 To 13) As String
+Dim cards(1 To 16) As String
+Dim flag As Boolean
+Dim c As Long
+Dim x As Long
+Dim r As Long
+
+cnt = 0  'カードめくった回数を初期化
+countUp = 0  'カード揃った回数を初期化
+figure(1) = "A": figure(2) = 2: figure(3) = 3: figure(4) = 4: figure(5) = 5: figure(6) = 6: figure(7) = 7: figure(8) = 8: figure(9) = 9:
+figure(10) = 10: figure(11) = "J": figure(12) = "Q": figure(13) = "K" '1～13の数字を配列に格納
+
+'52枚のカードを生成する。(ハート・ダイヤ・スペード・クローバーの各13枚)
+For i = 1 To 4
+    For j = 1 To 13
+        If i = 1 Then
+           mark = "Heart"
+        ElseIf i = 2 Then
+               mark = "Diamond"
+        ElseIf i = 3 Then
+               mark = "Spade"
+        Else
+               mark = "Clover"
+        End If
+        card(i, j) = mark & figure(j) '52枚のカードを配列cardに入れる。
+    Next j
+Next i
+    
+Randomize
+'52枚のカードより8組16枚をランダムに取得
+For i = 1 To 8
+    m = Int(4 * Rnd + 1)
+    n = Int(13 * Rnd + 1)
+    If card(m, n) <> "" Then '選択された配列に値が入っていたら
+       cards(2 * i - 1) = card(m, n) '1枚目のペア生成
+       card(m, n) = ""
+       m2 = Int(3 * Rnd + 1)
+       mPair = (m + m2) Mod 4
+       flag = False
+       Do While flag = False
+                If mPair = 0 Then
+                   mPair = 4
+                End If
+                If card(mPair, n) = "" Then  '2枚目のペアの値が入っていない時
+                   m2 = Int(3 * Rnd + 1)
+                   mPair = (m + m2) Mod 4
+                ElseIf card(mPair, n) <> "" Then  '2枚目のペアの値が入っている時
+                       cards(2 * i) = card(mPair, n) '2枚目のペア生成
+                       card(mPair, n) = ""
+                       flag = True  'フラグが立ち、ループから抜ける。
+                End If
+       Loop
+    Else
+    i = i - 1 '1枚目で選択された配列に値が入っていなかったら
+    End If
+Next
+'8組16枚のカードを4×4でランダムに赤色で配置する(C4からF7まで)
+c = 0
+For i = 1 To 4
+    For j = 1 To 4
+        r = Int((16 - c) * Rnd + 1)
+        Range("A2").Offset(i, j) = cards(r)
+        Range("A2").Offset(i, j).Interior.Color = RGB(255, 0, 0)
+        Range("B3:E6").Font.Color = RGB(255, 0, 0)
+    For x = r To 15
+        cards(x) = cards(x + 1)
+    Next x
+    c = c + 1
+    Next j
+Next i
+End Sub
+
+Sub Reverse(Target As Range)
+Dim ac(0 To 1) As Range
+Dim num As Long
+Dim numHikaku1 As String
+Dim numHikaku2 As String
+
+    
+    If Target.Interior.Color = RGB(255, 0, 0) Then
+       Target.Interior.Color = RGB(255, 255, 255)
+       cnt = cnt + 1
+       If cnt Mod 2 = 0 Then
+          Sleep 1000
+          num = 0
+          For i = 1 To 4
+              For j = 1 To 4
+                  If Range("A2").Offset(i, j).Interior.Color = RGB(255, 255, 255) Then
+                     Set ac(num) = Range("A2").Offset(i, j)
+                     num = 1
+                  End If
+             Next j
+         Next i
+         numHikaku1 = Right(ac(0), 1)
+         numHikaku2 = Right(ac(1), 1)
+          '2枚のカードが同じ数字なら記号と数字を表示させたまま
+          If numHikaku1 = numHikaku2 Then
+             ac(0).Interior.Color = RGB(150, 150, 150)
+             ac(1).Interior.Color = RGB(150, 150, 150)
+             countUp = countUp + 2
+          Else  '違う場合は裏向ける
+          ac(0).Interior.Color = RGB(255, 0, 0)
+          ac(1).Interior.Color = RGB(255, 0, 0)
+          End If
+          '16枚のカード全て揃えば、ゲームクリア表示
+          If countUp = 16 Then
+             MsgBox "ゲームクリア"
+             Call Init
+          End If
+       End If
+    End If
+End Sub
+
+Private Sub Worksheet_SelectionChange(ByVal Target As Range)
+'行列がエリア内か判定
+If Target.Row > 2 And Target.Row < 7 Then
+   If Target.Column > 1 And Target.Column < 6 Then
+      'アクティブセルが1つだけなら
+      If Target.count = 1 Then
+         Call Reverse(Target)
+      End If
+   End If
+End If
+Range("A1").Activate
+   
+End Sub
